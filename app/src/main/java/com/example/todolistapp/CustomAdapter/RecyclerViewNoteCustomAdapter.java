@@ -26,10 +26,9 @@ public class RecyclerViewNoteCustomAdapter extends RecyclerView.Adapter<Recycler
 
     private int type;
 
-    private final Context context;
     private List<NoteItem> dataSource;
 
-    private IItemClick itemClick;
+    private final IItemClick itemClick;
 
     public interface IItemClick {
 
@@ -39,7 +38,6 @@ public class RecyclerViewNoteCustomAdapter extends RecyclerView.Adapter<Recycler
     }
 
     public RecyclerViewNoteCustomAdapter(Context context, List<NoteItem> dataSource, IItemClick itemClick) {
-        this.context = context;
         this.dataSource = dataSource;
         this.itemClick = itemClick;
         this.type = RecyclerViewNoteCustomAdapter.TYPE_LIST_VIEW;
@@ -119,20 +117,11 @@ public class RecyclerViewNoteCustomAdapter extends RecyclerView.Adapter<Recycler
                 this.binding_List_View.timeCreate.setText(noteItem.getDate());
 
 
-                this.binding_List_View.mainCardView.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        itemClick.onClick(noteItem);
-                    }
-                });
+                this.binding_List_View.mainCardView.setOnClickListener(view -> itemClick.onClick(noteItem));
 
-                this.binding_List_View.mainCardView.setOnLongClickListener(new View.OnLongClickListener() {
-
-                    @Override
-                    public boolean onLongClick(View view) {
-                        itemClick.onLongClick(noteItem, binding_List_View.mainCardView);
-                        return true;
-                    }
+                this.binding_List_View.mainCardView.setOnLongClickListener(view -> {
+                    itemClick.onLongClick(noteItem, binding_List_View.mainCardView);
+                    return true;
                 });
             }
 
@@ -175,20 +164,11 @@ public class RecyclerViewNoteCustomAdapter extends RecyclerView.Adapter<Recycler
                 this.binding_Grid_View.timeCreate.setText(noteItem.getDate());
                 this.binding_Grid_View.textContent.setText(noteItem.getText_content());
 
-                this.binding_Grid_View.mainCardView.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        itemClick.onClick(noteItem);
-                    }
-                });
+                this.binding_Grid_View.mainCardView.setOnClickListener(view -> itemClick.onClick(noteItem));
 
-                this.binding_Grid_View.mainCardView.setOnLongClickListener(new View.OnLongClickListener() {
-
-                    @Override
-                    public boolean onLongClick(View view) {
-                        itemClick.onLongClick(noteItem, binding_Grid_View.mainCardView);
-                        return true;
-                    }
+                this.binding_Grid_View.mainCardView.setOnLongClickListener(view -> {
+                    itemClick.onLongClick(noteItem, binding_Grid_View.mainCardView);
+                    return true;
                 });
             }
         }

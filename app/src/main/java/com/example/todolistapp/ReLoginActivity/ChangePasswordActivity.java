@@ -4,6 +4,9 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.text.method.HideReturnsTransformationMethod;
+import android.text.method.PasswordTransformationMethod;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -28,6 +31,7 @@ public class ChangePasswordActivity extends AppCompatActivity implements View.On
 
     private ProgressBar progressBar;
     private EditText newPass, confirmPass;
+    private boolean passwordVisible;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +44,57 @@ public class ChangePasswordActivity extends AppCompatActivity implements View.On
 
         progressBar = findViewById(R.id.progressBar);
         changePassBtn.setOnClickListener(this);
+
+        SetToggleButtonInPasswordInput();
+        SetToggleButtonInConfirmPasswordInput();
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void SetToggleButtonInPasswordInput() {
+        newPass.setOnTouchListener((View view, @SuppressLint("ClickableViewAccessibility") MotionEvent motionEvent) -> {
+            final int Right = 2;
+            if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
+                if (motionEvent.getRawX() >= newPass.getRight() - newPass.getCompoundDrawables()[Right].getBounds().width()) {
+                    int selection = confirmPass.getSelectionEnd();
+                    if (passwordVisible) {
+                        newPass.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_visibility_off, 0);
+                        newPass.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                        passwordVisible = false;
+                    } else {
+                        newPass.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_visibility, 0);
+                        newPass.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
+                        passwordVisible = true;
+                    }
+                    newPass.setSelection(selection);
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void SetToggleButtonInConfirmPasswordInput() {
+        confirmPass.setOnTouchListener((View view, @SuppressLint("ClickableViewAccessibility") MotionEvent motionEvent) -> {
+            final int Right = 2;
+            if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
+                if (motionEvent.getRawX() >= confirmPass.getRight() - confirmPass.getCompoundDrawables()[Right].getBounds().width()) {
+                    int selection = confirmPass.getSelectionEnd();
+                    if (passwordVisible) {
+                        confirmPass.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_visibility_off, 0);
+                        confirmPass.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                        passwordVisible = false;
+                    } else {
+                        confirmPass.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_visibility, 0);
+                        confirmPass.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
+                        passwordVisible = true;
+                    }
+                    confirmPass.setSelection(selection);
+                    return true;
+                }
+            }
+            return false;
+        });
     }
 
     @SuppressLint("ShowToast")
@@ -98,7 +153,9 @@ public class ChangePasswordActivity extends AppCompatActivity implements View.On
                     startActivity(new Intent(ChangePasswordActivity.this, MainActivity.class));
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(ChangePasswordActivity.this, "Failed to change password, some errors has occurred", Toast.LENGTH_SHORT).show());
+                        Toast.makeText(ChangePasswordActivity.this, "Failed to change password, some errors has occurred", Toast.LENGTH_SHORT).show()
+                );
+        progressBar.setVisibility(View.GONE);
 
     }
 }

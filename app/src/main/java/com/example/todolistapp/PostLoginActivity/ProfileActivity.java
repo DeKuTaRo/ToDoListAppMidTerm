@@ -27,9 +27,6 @@ import com.example.todolistapp.R;
 import com.example.todolistapp.ReLoginActivity.ChangePasswordActivity;
 import com.example.todolistapp.ReLoginActivity.MainActivity;
 import com.example.todolistapp.databinding.ActivityProfileBinding;
-import com.google.android.gms.tasks.Continuation;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -39,16 +36,14 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
-import com.google.firebase.storage.UploadTask;
 import com.squareup.picasso.Picasso;
 
 public class ProfileActivity extends AppCompatActivity {
 
     private ActivityProfileBinding binding;
-    private FirebaseUser user;
     private DatabaseReference reference;
     StorageReference storageImageAvatarReference;
-    private String imageAvatarUriTask;
+    private String imageAvatarUriTask, fullNameDB;
 
     private String userID;
     User userProfile;
@@ -66,12 +61,9 @@ public class ProfileActivity extends AppCompatActivity {
         setContentView(viewRoot);
 
 
-        this.user = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         this.reference = FirebaseDatabase.getInstance().getReference("Users");
-        this.userID = this.user.getUid();
-
-//        final TextView fullNameTextView = this.binding.fullName;
-//        final TextView emailTextView = this.binding.emailAddress;
+        this.userID = user.getUid();
 
         this.reference.child(this.userID).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -79,11 +71,11 @@ public class ProfileActivity extends AppCompatActivity {
                 User userProfileValue = snapshot.getValue(User.class);
 
                 if (userProfileValue != null) {
-                    String fullName = userProfileValue.getFullName();
+                    fullNameDB = userProfileValue.getFullName();
                     String email = userProfileValue.getEmail();
                     String imageAvatar = userProfileValue.getAvatarPath();
 
-                    binding.fullName.setText(fullName);
+                    binding.fullName.setText(fullNameDB);
                     binding.emailAddress.setText(email);
 
                     if (imageAvatar != null && !imageAvatar.trim().isEmpty()) {
@@ -98,40 +90,27 @@ public class ProfileActivity extends AppCompatActivity {
             }
         });
 
-        this.binding.avatarFAB.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE)
-                        != PackageManager.PERMISSION_GRANTED) {
-                    ActivityCompat.requestPermissions(ProfileActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                            REQUEST_CODE_STORAGE_AVATAR_PERMISSION);
-                }
-                else {
-                    selectImageAvatar();
-                }
+        this.binding.avatarFAB.setOnClickListener(v -> {
+            if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(ProfileActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        REQUEST_CODE_STORAGE_AVATAR_PERMISSION);
+            }
+            else {
+                selectImageAvatar();
             }
         });
 
-        this.binding.imageEditName.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                binding.fullName.setEnabled(true);
-            }
+        this.binding.imageEditName.setOnClickListener(v -> {
+            binding.fullName.setEnabled(true);
+            binding.fullName.requestFocus();
         });
 
-        this.binding.changePassBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(ProfileActivity.this, ChangePasswordActivity.class));
-            }
-        });
+        this.binding.changePassBtn.setOnClickListener(v -> startActivity(new Intent(ProfileActivity.this, ChangePasswordActivity.class)));
 
-        this.binding.logoutBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                FirebaseAuth.getInstance().signOut();
-                startActivity(new Intent(ProfileActivity.this, MainActivity.class));
-            }
+        this.binding.logoutBtn.setOnClickListener(v -> {
+            FirebaseAuth.getInstance().signOut();
+            startActivity(new Intent(ProfileActivity.this, MainActivity.class));
         });
 
     }
@@ -146,12 +125,10 @@ public class ProfileActivity extends AppCompatActivity {
     @SuppressLint("NonConstantResourceId")
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.saveProfileBtn :
-                saveProfileData();
-                break;
-            default:
-                return super.onOptionsItemSelected(item);
+        if (item.getItemId() == R.id.saveProfileBtn) {
+            saveProfileData();
+        } else {
+            return super.onOptionsItemSelected(item);
         }
         return super.onOptionsItemSelected(item);
     }
@@ -182,42 +159,38 @@ public class ProfileActivity extends AppCompatActivity {
             storageImageAvatarReference = FirebaseStorage.getInstance().getReference("avatar");
             StorageReference imageCoverPhotoReference = storageImageAvatarReference.child(System.currentTimeMillis() +
                     "." + getFileExtension(imageAvatarUri));
-            imageCoverPhotoReference.putFile(imageAvatarUri).continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
-                @Override
-                public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
-                    if (!task.isSuccessful()) {
-                        throw task.getException();
-                    }
-
-                    return imageCoverPhotoReference.getDownloadUrl();
+            imageCoverPhotoReference.putFile(imageAvatarUri).continueWithTask(task -> {
+                if (!task.isSuccessful()) {
+                    throw task.getException();
                 }
-            }).addOnCompleteListener(new OnCompleteListener<Uri>() {
-                @Override
-                public void onComplete(@NonNull Task<Uri> task) {
-                    if (task.isSuccessful()) {
-                        imageAvatarUriTask = task.getResult().toString();
-                        userProfile = new User(fullName, imageAvatarUriTask);
-                        reference.child(userID).addListenerForSingleValueEvent(new ValueEventListener() {
-                            @Override
-                            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                                snapshot.getRef().child("fullName").setValue(fullName);
-                                snapshot.getRef().child("avatarPath").setValue(imageAvatarUriTask);
 
-                                Toast.makeText(ProfileActivity.this, "Update successfully", Toast.LENGTH_SHORT).show();
-                            }
+                return imageCoverPhotoReference.getDownloadUrl();
+            }).addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    imageAvatarUriTask = task.getResult().toString();
+                    userProfile = new User(fullName, imageAvatarUriTask);
+                    reference.child(userID).addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            snapshot.getRef().child("fullName").setValue(fullName);
+                            snapshot.getRef().child("avatarPath").setValue(imageAvatarUriTask);
 
-                            @Override
-                            public void onCancelled(@NonNull DatabaseError error) {
+                            Toast.makeText(ProfileActivity.this, "Update successfully", Toast.LENGTH_SHORT).show();
+                        }
 
-                            }
-                        });
-                    }
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+
+                        }
+                    });
                 }
             });
         }
 
         this.binding.fullName.setEnabled(false);
+
     }
+// }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -250,8 +223,6 @@ public class ProfileActivity extends AppCompatActivity {
                 if (imageAvatarUri != null) {
                     try {
                         Picasso.get().load(imageAvatarUri).into(binding.imageAvatar);
-
-                        binding.imageAvatar.setVisibility(View.VISIBLE);
 
                     } catch (Exception e) {
                         Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();

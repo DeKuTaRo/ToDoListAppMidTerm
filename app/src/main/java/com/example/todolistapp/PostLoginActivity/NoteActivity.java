@@ -1,7 +1,6 @@
 package com.example.todolistapp.PostLoginActivity;
 
 import android.annotation.SuppressLint;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.method.HideReturnsTransformationMethod;
@@ -23,16 +22,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.DividerItemDecoration;
-import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 
 import com.example.todolistapp.CustomAdapter.RecyclerViewNoteCustomAdapter;
 import com.example.todolistapp.Models.NoteItem;
 import com.example.todolistapp.R;
 import com.example.todolistapp.RoomDatabase.RoomDB;
 import com.example.todolistapp.databinding.ActivityNoteBinding;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
@@ -71,12 +69,9 @@ public class NoteActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         View viewRoot = this.binding.getRoot();
         setContentView(viewRoot);
 
-        this.binding.imageAddNoteMain.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent i = new Intent(NoteActivity.this, AddNoteActivity.class);
-                startActivityForResult(i, 101);
-            }
+        this.binding.imageAddNoteMain.setOnClickListener(v -> {
+            Intent i = new Intent(NoteActivity.this, AddNoteActivity.class);
+            startActivityForResult(i, 101);
         });
 
 //        InitializeListView();
@@ -302,26 +297,19 @@ public class NoteActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
                 .setTitle("Please enter your password")
                 .setView(ll)
-                .setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
+                .setPositiveButton("Confirm", (dialog, which) -> {
+                    String passwordValue = passwordNote.getText().toString();
 
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        String passwordValue = passwordNote.getText().toString();
-
-                        if (passwordValue.equals(noteItem.getPasswordNote())) {
-                            Intent intent = new Intent(NoteActivity.this, UpdateActivity.class);
-                            intent.putExtra("noteItems", noteItem);
-                            startActivityForResult(intent, 102);
-                        } else {
-                            Toast.makeText(NoteActivity.this, "Password incorrect", Toast.LENGTH_SHORT).show();
-                        }
+                    if (passwordValue.equals(noteItem.getPasswordNote())) {
+                        Intent intent = new Intent(NoteActivity.this, UpdateActivity.class);
+                        intent.putExtra("noteItems", noteItem);
+                        startActivityForResult(intent, 102);
+                    } else {
+                        Toast.makeText(NoteActivity.this, "Password incorrect", Toast.LENGTH_SHORT).show();
                     }
                 })
-                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
+                .setNegativeButton("Cancel", (dialog, which) -> {
 
-                    }
                 });
         AlertDialog dialog = builder.create();
         dialog.show();
@@ -372,46 +360,24 @@ public class NoteActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
         if (noteItem.getImagePath() != null && !noteItem.getImagePath().trim().isEmpty()) {
             StorageReference imageReference = storage.getReferenceFromUrl(noteItem.getImagePath());
-            imageReference.delete().addOnSuccessListener(new OnSuccessListener<Void>() {
-                @Override
-                public void onSuccess(Void unused) {
-                    databaseReference.child(idNote).removeValue(new DatabaseReference.CompletionListener() {
-                        @Override
-                        public void onComplete(@Nullable DatabaseError error, @NonNull DatabaseReference ref) {
+            imageReference.delete().addOnSuccessListener(unused -> databaseReference.child(idNote).removeValue((error, ref) -> {
 
-                        }
-                    });
-                }
-            });
+            }));
         }
         else {
-            databaseReference.child(idNote).removeValue(new DatabaseReference.CompletionListener() {
-                @Override
-                public void onComplete(@Nullable DatabaseError error, @NonNull DatabaseReference ref) {
+            databaseReference.child(idNote).removeValue((error, ref) -> {
 
-                }
             });
         }
          if (noteItem.getVideoPath() != null && !noteItem.getVideoPath().trim().isEmpty()) {
             StorageReference videoReference = storage.getReferenceFromUrl(noteItem.getVideoPath());
-            videoReference.delete().addOnSuccessListener(new OnSuccessListener<Void>() {
-                @Override
-                public void onSuccess(Void unused) {
-                    databaseReference.child(idNote).removeValue(new DatabaseReference.CompletionListener() {
-                        @Override
-                        public void onComplete(@Nullable DatabaseError error, @NonNull DatabaseReference ref) {
+            videoReference.delete().addOnSuccessListener(unused -> databaseReference.child(idNote).removeValue((error, ref) -> {
 
-                        }
-                    });
-                }
-            });
+            }));
         }
          else {
-             databaseReference.child(idNote).removeValue(new DatabaseReference.CompletionListener() {
-                 @Override
-                 public void onComplete(@Nullable DatabaseError error, @NonNull DatabaseReference ref) {
+             databaseReference.child(idNote).removeValue((error, ref) -> {
 
-                 }
              });
          }
 
@@ -447,8 +413,9 @@ public class NoteActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             this.recyclerViewNoteCustomAdapter.setType(RecyclerViewNoteCustomAdapter.TYPE_GRID_VIEW);
             item.setIcon(R.drawable.ic_grid_off);
 
-            GridLayoutManager gridLayoutManager = new GridLayoutManager(NoteActivity.this, 2);
-            this.binding.recycleView.setLayoutManager(gridLayoutManager);
+//            GridLayoutManager gridLayoutManager = new GridLayoutManager(NoteActivity.this, 2);
+            StaggeredGridLayoutManager staggeredGridLayoutManager = new StaggeredGridLayoutManager(2,LinearLayout.VERTICAL);
+            this.binding.recycleView.setLayoutManager(staggeredGridLayoutManager);
             this.recyclerViewNoteCustomAdapter.notifyDataSetChanged();
             return;
         }

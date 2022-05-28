@@ -32,17 +32,14 @@ import androidx.core.content.ContextCompat;
 
 import com.example.todolistapp.Models.NoteItem;
 import com.example.todolistapp.R;
-import com.google.android.gms.tasks.Continuation;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
+
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
-import com.google.firebase.storage.StorageTask;
-import com.google.firebase.storage.UploadTask;
+
 import com.squareup.picasso.Picasso;
 
 import java.text.SimpleDateFormat;
@@ -51,14 +48,14 @@ import java.util.Objects;
 
 public class AddNoteActivity extends AppCompatActivity implements View.OnClickListener{
     private EditText label, subtitle, textContent;
-    private ImageView imageBack, imageSave, imageNote;
+    private ImageView imageNote;
     private TextView textDateTime;
     private View viewSubtitleIndicator;
     private TextView textWebURL;
-    private LinearLayout layoutWebURL;;
+    private LinearLayout layoutWebURL;
     private AlertDialog dialogURL;
     private VideoView videoView;
-    private String selectedNoteColor, selectedImagePath, selectedVideoPath;
+    private String selectedNoteColor;
     private LinearLayout layoutDeleteVideo;
     private Uri imageUri, videoUri;
 
@@ -69,22 +66,18 @@ public class AddNoteActivity extends AppCompatActivity implements View.OnClickLi
     private static final int REQUEST_CODE_SELECT_IMAGE = 4;
     private static final int REQUEST_CODE_SELECT_VIDEO = 5;
 
-    private FirebaseAuth mAuth;
-    private FirebaseDatabase rootNode;
     DatabaseReference reference;
     StorageReference storageImageReference, storageVideoReference;
-    private StorageTask mUploadTask;
 
     private String imageUriTask, videoUriTask;
     NoteItem noteItem;
-    private String userID;
+
     @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_note);
 
-        mAuth = FirebaseAuth.getInstance();
 
         label = findViewById(R.id.label);
         subtitle = findViewById(R.id.subtitle);
@@ -102,44 +95,32 @@ public class AddNoteActivity extends AppCompatActivity implements View.OnClickLi
         layoutDeleteVideo = findViewById(R.id.layoutDeleteVideo);
 
         imageNote = findViewById(R.id.imageNote);
-        imageBack = findViewById(R.id.imageBack);
+        ImageView imageBack = findViewById(R.id.imageBack);
         imageBack.setOnClickListener(this);
-        imageSave = findViewById(R.id.imageSave);
+        ImageView imageSave = findViewById(R.id.imageSave);
         imageSave.setOnClickListener(this);
         videoView = findViewById(R.id.videoView);
         videoView.setOnPreparedListener(mp -> mp.setLooping(true));
 
         selectedNoteColor = "#333333";
-        selectedImagePath = "";
-        selectedVideoPath = "";
 
-        findViewById(R.id.imageRemoveWebURL).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                textWebURL.setVisibility(View.GONE);
-                layoutWebURL.setVisibility(View.GONE);
-            }
+        findViewById(R.id.imageRemoveWebURL).setOnClickListener(v -> {
+            textWebURL.setVisibility(View.GONE);
+            layoutWebURL.setVisibility(View.GONE);
         });
 
-        findViewById(R.id.imageRemoveImage).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        findViewById(R.id.imageRemoveImage).setOnClickListener(v -> {
 
-                Picasso.get().load((Uri) null).into(imageNote);
-                imageNote.setVisibility(View.GONE);
-                findViewById(R.id.imageRemoveImage).setVisibility(View.GONE);
-            }
+            Picasso.get().load((Uri) null).into(imageNote);
+            imageNote.setVisibility(View.GONE);
+            findViewById(R.id.imageRemoveImage).setVisibility(View.GONE);
         });
 
-        findViewById(R.id.imageRemoveVideo).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                videoView.setVideoURI(null);
-                videoView.setVisibility(View.GONE);
-                layoutDeleteVideo.setVisibility(View.GONE);
-                findViewById(R.id.imageRemoveVideo).setVisibility(View.GONE);
-                selectedVideoPath = "";
-            }
+        findViewById(R.id.imageRemoveVideo).setOnClickListener(v -> {
+            videoView.setVideoURI(null);
+            videoView.setVisibility(View.GONE);
+            layoutDeleteVideo.setVisibility(View.GONE);
+            findViewById(R.id.imageRemoveVideo).setVisibility(View.GONE);
         });
 
         initMiscellaneous();
@@ -190,8 +171,8 @@ public class AddNoteActivity extends AppCompatActivity implements View.OnClickLi
         String colorValue = noteItem.getColor();
         String webLinkValue = noteItem.getWebLink();
 
-        userID = Objects.requireNonNull(FirebaseAuth.getInstance().getCurrentUser()).getUid();
-        rootNode = FirebaseDatabase.getInstance();
+        String userID = Objects.requireNonNull(FirebaseAuth.getInstance().getCurrentUser()).getUid();
+        FirebaseDatabase rootNode = FirebaseDatabase.getInstance();
         reference = rootNode.getReference("Users").child(userID).child("NoteItems");
 
 
@@ -202,23 +183,17 @@ public class AddNoteActivity extends AppCompatActivity implements View.OnClickLi
             storageImageReference = FirebaseStorage.getInstance().getReference("images");
             StorageReference imageReference = storageImageReference.child(System.currentTimeMillis() +
                     "." + getFileExtension(imageUri));
-            imageReference.putFile(imageUri).continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
-                @Override
-                public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
-                    if (!task.isSuccessful()) {
-                        throw task.getException();
-                    }
-
-                    return imageReference.getDownloadUrl();
+            imageReference.putFile(imageUri).continueWithTask(task -> {
+                if (!task.isSuccessful()) {
+                    throw task.getException();
                 }
-            }).addOnCompleteListener(new OnCompleteListener<Uri>() {
-                @Override
-                public void onComplete(@NonNull Task<Uri> task) {
-                    if (task.isSuccessful()) {
-                        imageUriTask = task.getResult().toString();
-                        noteItem = new NoteItem(labelValue, subtitleValue, textContentValue, dateValue, colorValue, imageUriTask, videoUriTask, webLinkValue, "");
-                        reference.child(noteItem.getLabel()).setValue(noteItem);
-                    }
+
+                return imageReference.getDownloadUrl();
+            }).addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    imageUriTask = task.getResult().toString();
+                    noteItem = new NoteItem(labelValue, subtitleValue, textContentValue, dateValue, colorValue, imageUriTask, videoUriTask, webLinkValue, "");
+                    reference.child(noteItem.getLabel()).setValue(noteItem);
                 }
             });
         }
@@ -230,23 +205,17 @@ public class AddNoteActivity extends AppCompatActivity implements View.OnClickLi
             storageVideoReference = FirebaseStorage.getInstance().getReference("videos");
             StorageReference videoReference = storageVideoReference.child(System.currentTimeMillis() +
                     "." + getFileExtension(videoUri));
-            videoReference.putFile(videoUri).continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
-                @Override
-                public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
-                    if (!task.isSuccessful()) {
-                        throw task.getException();
-                    }
-
-                    return videoReference.getDownloadUrl();
+            videoReference.putFile(videoUri).continueWithTask(task -> {
+                if (!task.isSuccessful()) {
+                    throw task.getException();
                 }
-            }).addOnCompleteListener(new OnCompleteListener<Uri>() {
-                @Override
-                public void onComplete(@NonNull Task<Uri> task) {
-                    if (task.isSuccessful()) {
-                        videoUriTask = task.getResult().toString();
-                        noteItem = new NoteItem(labelValue, subtitleValue, textContentValue, dateValue, colorValue, imageUriTask, videoUriTask, webLinkValue, "");
-                        reference.child(noteItem.getLabel()).setValue(noteItem);
-                    }
+
+                return videoReference.getDownloadUrl();
+            }).addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    videoUriTask = task.getResult().toString();
+                    noteItem = new NoteItem(labelValue, subtitleValue, textContentValue, dateValue, colorValue, imageUriTask, videoUriTask, webLinkValue, "");
+                    reference.child(noteItem.getLabel()).setValue(noteItem);
                 }
             });
         }
@@ -263,14 +232,11 @@ public class AddNoteActivity extends AppCompatActivity implements View.OnClickLi
     private void initMiscellaneous() {
         final LinearLayout layoutMiscellaneous = findViewById(R.id.layoutMiscellaneous);
         final BottomSheetBehavior<LinearLayout> bottomSheetBehavior = BottomSheetBehavior.from(layoutMiscellaneous);
-        layoutMiscellaneous.findViewById(R.id.textMiscellaneous).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (bottomSheetBehavior.getState() != BottomSheetBehavior.STATE_EXPANDED) {
-                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
-                } else {
-                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-                }
+        layoutMiscellaneous.findViewById(R.id.textMiscellaneous).setOnClickListener(v -> {
+            if (bottomSheetBehavior.getState() != BottomSheetBehavior.STATE_EXPANDED) {
+                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+            } else {
+                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
             }
         });
 
@@ -280,114 +246,82 @@ public class AddNoteActivity extends AppCompatActivity implements View.OnClickLi
         final ImageView imageColor4 = layoutMiscellaneous.findViewById(R.id.imageColor4);
         final ImageView imageColor5 = layoutMiscellaneous.findViewById(R.id.imageColor5);
 
-        layoutMiscellaneous.findViewById(R.id.viewColor1).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                selectedNoteColor = "#333333";
-                imageColor1.setImageResource(R.drawable.ic_check);
-                imageColor2.setImageResource(0);
-                imageColor3.setImageResource(0);
-                imageColor4.setImageResource(0);
-                imageColor5.setImageResource(0);
-                setSubtitleIndicator();
+        layoutMiscellaneous.findViewById(R.id.viewColor1).setOnClickListener(v -> {
+            selectedNoteColor = "#333333";
+            imageColor1.setImageResource(R.drawable.ic_check);
+            imageColor2.setImageResource(0);
+            imageColor3.setImageResource(0);
+            imageColor4.setImageResource(0);
+            imageColor5.setImageResource(0);
+            setSubtitleIndicator();
+        });
+
+        layoutMiscellaneous.findViewById(R.id.viewColor2).setOnClickListener(v -> {
+            selectedNoteColor = "#FDBE3B";
+            imageColor1.setImageResource(0);
+            imageColor2.setImageResource(R.drawable.ic_check);
+            imageColor3.setImageResource(0);
+            imageColor4.setImageResource(0);
+            imageColor5.setImageResource(0);
+            setSubtitleIndicator();
+        });
+
+        layoutMiscellaneous.findViewById(R.id.viewColor3).setOnClickListener(v -> {
+            selectedNoteColor = "#FF4842";
+            imageColor1.setImageResource(0);
+            imageColor2.setImageResource(0);
+            imageColor3.setImageResource(R.drawable.ic_check);
+            imageColor4.setImageResource(0);
+            imageColor5.setImageResource(0);
+            setSubtitleIndicator();
+        });
+
+        layoutMiscellaneous.findViewById(R.id.viewColor4).setOnClickListener(v -> {
+            selectedNoteColor = "#3A52Fc";
+            imageColor1.setImageResource(0);
+            imageColor2.setImageResource(0);
+            imageColor3.setImageResource(0);
+            imageColor4.setImageResource(R.drawable.ic_check);
+            imageColor5.setImageResource(0);
+            setSubtitleIndicator();
+        });
+
+        layoutMiscellaneous.findViewById(R.id.viewColor5).setOnClickListener(v -> {
+            selectedNoteColor = "#000000";
+            imageColor1.setImageResource(0);
+            imageColor2.setImageResource(0);
+            imageColor3.setImageResource(0);
+            imageColor4.setImageResource(0);
+            imageColor5.setImageResource(R.drawable.ic_check);
+            setSubtitleIndicator();
+        });
+
+        layoutMiscellaneous.findViewById(R.id.layoutAddImage).setOnClickListener(v -> {
+            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+            if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(AddNoteActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        REQUEST_CODE_STORAGE_PERMISSION);
+            }
+            else {
+                selectImage();
             }
         });
 
-        layoutMiscellaneous.findViewById(R.id.viewColor2).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                selectedNoteColor = "#FDBE3B";
-                imageColor1.setImageResource(0);
-                imageColor2.setImageResource(R.drawable.ic_check);
-                imageColor3.setImageResource(0);
-                imageColor4.setImageResource(0);
-                imageColor5.setImageResource(0);
-                setSubtitleIndicator();
-            }
+        layoutMiscellaneous.findViewById(R.id.layoutAddUrl).setOnClickListener(v -> {
+            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+            showAddURLDialog();
         });
 
-        layoutMiscellaneous.findViewById(R.id.viewColor3).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                selectedNoteColor = "#FF4842";
-                imageColor1.setImageResource(0);
-                imageColor2.setImageResource(0);
-                imageColor3.setImageResource(R.drawable.ic_check);
-                imageColor4.setImageResource(0);
-                imageColor5.setImageResource(0);
-                setSubtitleIndicator();
-            }
-        });
-
-        layoutMiscellaneous.findViewById(R.id.viewColor4).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                selectedNoteColor = "#3A52Fc";
-                imageColor1.setImageResource(0);
-                imageColor2.setImageResource(0);
-                imageColor3.setImageResource(0);
-                imageColor4.setImageResource(R.drawable.ic_check);
-                imageColor5.setImageResource(0);
-                setSubtitleIndicator();
-            }
-        });
-
-        layoutMiscellaneous.findViewById(R.id.viewColor5).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                selectedNoteColor = "#000000";
-                imageColor1.setImageResource(0);
-                imageColor2.setImageResource(0);
-                imageColor3.setImageResource(0);
-                imageColor4.setImageResource(0);
-                imageColor5.setImageResource(R.drawable.ic_check);
-                setSubtitleIndicator();
-            }
-        });
-
-        layoutMiscellaneous.findViewById(R.id.layoutAddImage).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-                if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE)
+        layoutMiscellaneous.findViewById(R.id.layoutAddVideo).setOnClickListener(v -> {
+            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+            if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE)
                     != PackageManager.PERMISSION_GRANTED) {
-                    ActivityCompat.requestPermissions(AddNoteActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                            REQUEST_CODE_STORAGE_PERMISSION);
-                }
-                else {
-                    selectImage();
-                }
+                ActivityCompat.requestPermissions(AddNoteActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        REQUEST_CODE_STORAGE_VIDEO_PERMISSION);
             }
-        });
-
-        layoutMiscellaneous.findViewById(R.id.layoutAddUrl).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-                showAddURLDialog();
-            }
-        });
-
-        layoutMiscellaneous.findViewById(R.id.layoutAddVideo).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-                if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE)
-                        != PackageManager.PERMISSION_GRANTED) {
-                    ActivityCompat.requestPermissions(AddNoteActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                            REQUEST_CODE_STORAGE_VIDEO_PERMISSION);
-                }
-                else {
-                    selectVideo();
-                }
-            }
-        });
-
-        layoutMiscellaneous.findViewById(R.id.layoutAddVoice).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-                addVoice();
+            else {
+                selectVideo();
             }
         });
     }
@@ -495,32 +429,21 @@ public class AddNoteActivity extends AppCompatActivity implements View.OnClickLi
             final EditText inputURL = view.findViewById(R.id.inputURL);
             inputURL.requestFocus();
 
-            view.findViewById(R.id.textAdd).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (inputURL.getText().toString().trim().isEmpty()) {
-                        Toast.makeText(AddNoteActivity.this, "Please enter URL", Toast.LENGTH_SHORT).show();
-                    } else if (!Patterns.WEB_URL.matcher(inputURL.getText().toString()).matches()) {
-                        Toast.makeText(AddNoteActivity.this, "Please enter a valid URL", Toast.LENGTH_SHORT).show();
-                    } else {
-                        textWebURL.setText(inputURL.getText().toString());
-                        layoutWebURL.setVisibility(View.VISIBLE);
-                        dialogURL.dismiss();
-                    }
-                }
-            });
-
-            view.findViewById(R.id.textCancel).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
+            view.findViewById(R.id.textAdd).setOnClickListener(v -> {
+                if (inputURL.getText().toString().trim().isEmpty()) {
+                    Toast.makeText(AddNoteActivity.this, "Please enter URL", Toast.LENGTH_SHORT).show();
+                } else if (!Patterns.WEB_URL.matcher(inputURL.getText().toString()).matches()) {
+                    Toast.makeText(AddNoteActivity.this, "Please enter a valid URL", Toast.LENGTH_SHORT).show();
+                } else {
+                    textWebURL.setText(inputURL.getText().toString());
+                    layoutWebURL.setVisibility(View.VISIBLE);
                     dialogURL.dismiss();
                 }
             });
+
+            view.findViewById(R.id.textCancel).setOnClickListener(v -> dialogURL.dismiss());
         }
         dialogURL.show();
     }
 
-    private void addVoice() {
-        Toast.makeText(AddNoteActivity.this, "This function is developing", Toast.LENGTH_SHORT).show();
-    }
 }

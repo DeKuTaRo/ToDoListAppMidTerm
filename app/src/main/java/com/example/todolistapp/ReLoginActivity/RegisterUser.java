@@ -22,9 +22,7 @@ import com.google.firebase.database.FirebaseDatabase;
 
 public class RegisterUser extends AppCompatActivity implements View.OnClickListener{
 
-    private ActivityRegisterUserBinding binding;
-
-    private EditText fullName_input, age_input, email_input, password_input, password_input_rewrite;
+    private EditText fullName_input, email_input, password_input, password_input_rewrite;
     private ProgressBar progressBar;
 
     private FirebaseAuth mAuth;
@@ -43,21 +41,21 @@ public class RegisterUser extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        this.binding = ActivityRegisterUserBinding.inflate(getLayoutInflater());
-        View viewRoot = this.binding.getRoot();
+        com.example.todolistapp.databinding.ActivityRegisterUserBinding binding = ActivityRegisterUserBinding.inflate(getLayoutInflater());
+        View viewRoot = binding.getRoot();
         setContentView(viewRoot);
 
         this.mAuth = FirebaseAuth.getInstance();
 
-        this.binding.banner.setOnClickListener(this);
-        this.binding.registerUser.setOnClickListener(this);
+        binding.banner.setOnClickListener(this);
+        binding.registerUser.setOnClickListener(this);
 
-        this.fullName_input = this.binding.fullNameInput;
-        this.email_input = this.binding.emailInput;
-        this.password_input = this.binding.passwordInput;
-        this.password_input_rewrite= this.binding.passwordInputRewrite;
+        this.fullName_input = binding.fullNameInput;
+        this.email_input = binding.emailInput;
+        this.password_input = binding.passwordInput;
+        this.password_input_rewrite= binding.passwordInputRewrite;
 
-        this.progressBar = this.binding.progressBar;
+        this.progressBar = binding.progressBar;
     }
 
     @SuppressLint("NonConstantResourceId")
@@ -93,8 +91,8 @@ public class RegisterUser extends AppCompatActivity implements View.OnClickListe
         }
 
         if (!Patterns.EMAIL_ADDRESS.matcher(emailValue).matches()) {
-            password_input.setError("Please provide valid email");
-            password_input.requestFocus();
+            email_input.setError("Please provide valid email");
+            email_input.requestFocus();
             return;
         }
 
